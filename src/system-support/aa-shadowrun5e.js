@@ -21,7 +21,7 @@ const TEST = {
 /* 
     This method handles ShadowRun 5e system specific behavior.
     - For weapons, as the system has hundreds of weapon items with different names,
-        a second lookup if performed with the skill name to allow a quick setup while still offering the main base behavior.
+        a second lookup if performed with the range-attribute and a third if performed with the skill name to allow a quick setup while still offering the main base behavior.
     - For spells, we use the same trick with the magic school as a fallback
  */
 async function checkChatMessage(msg) {
@@ -41,19 +41,27 @@ async function checkChatMessage(msg) {
     }
 
     // #2 Evaluate if the item is a match in the AA configuration
-    if (await tryAnnimationWith(compiledData)) {
+    if (await tryAnimationWith(compiledData)) {
         return;
     }
 
     // #3 If not, let's find a match using TEST-specific means as item name
+    let category;
+
     switch (test.type) {
         case TEST.Spell:
             // For spells, the category (health / combat / illusion /...) is a good fallback
-            const category = compiledData.item?.system?.category;
-            if (category && await tryAnnimationWith(compiledData, category)) {
-                return;
-            }
+            category = compiledData.item?.system?.category;
             break;
+        case TEST.Range:
+        case TEST.Thrown:
+            // For ranged weapons, the range category is a good fallback
+            category = compiledData.item?.system?.range?.ranges?.category;
+            break;
+    }
+
+    if (category && await tryAnimationWith(compiledData, category)) {
+        return;
     }
 
     // #4 Last, we can try the skill. Use example:
@@ -61,7 +69,7 @@ async function checkChatMessage(msg) {
     //  - when going sneaking tests
     //  - ...
     const skill = compiledData.item?.getActionSkill()
-    if (skill && await tryAnnimationWith(compiledData, skill)) {
+    if (skill && await tryAnimationWith(compiledData, skill)) {
         return;
     }
 }
@@ -69,6 +77,7 @@ async function checkChatMessage(msg) {
 async function computeCompiledData(msg, test)
 {
     let item;
+    let ammo;
     switch (test.type) {
         case TEST.Skill:
             item =  {
@@ -93,10 +102,17 @@ async function computeCompiledData(msg, test)
             if (!item) {
                 return;
             }
+            for (let currentItem of item.items) {
+                if (currentItem.type === 'ammo' && currentItem.system.technology.equipped === true) {
+                    ammo = currentItem;
+                    break;
+                }
+            }
     }
 
     const compiledData = await getRequiredData({
         item: item,
+        ammoItem: ammo,
         actorId: msg.speaker?.actor,
         tokenId: msg.speaker?.token,
         workflow: msg,
@@ -123,7 +139,7 @@ async function computeCompiledData(msg, test)
     return compiledData;
 }
 
-async function tryAnnimationWith(compiledData, itemNameOverride) {
+async function tryAnimationWith(compiledData, itemNameOverride) {
     if (itemNameOverride) {
         compiledData.item = {
             name: itemNameOverride
