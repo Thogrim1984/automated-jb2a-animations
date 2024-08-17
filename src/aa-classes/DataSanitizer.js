@@ -162,6 +162,7 @@ export class DataSanitizer {
                     zIndex: data.zIndex || 1,
                 };
             case "range":
+
                 return {
                     animationSource: data.animationSource ?? false,
                     contrast: data.contrast ?? 0,

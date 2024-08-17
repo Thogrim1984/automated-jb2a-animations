@@ -12,6 +12,7 @@ export async function handleItem(data) {
     const rinsedItemName = itemName ? AAAutorecFunctions.rinseName(itemName) : "noitem";
 
     const ammoItem = data.ammoItem;
+
     const rinsedAmmoName = ammoItem?.name ? AAAutorecFunctions.rinseName(ammoItem.name) : "";
 
     // Send Item thru Flag Merge
